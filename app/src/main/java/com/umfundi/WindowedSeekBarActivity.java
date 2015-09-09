@@ -22,7 +22,7 @@ public class WindowedSeekBarActivity extends Activity {
 
         wsb.updateViews(tv1, tv2, tv3);
 
-        wsb.updateBar(5000, 1000, 4000, 10000);
+        wsb.updateBar(50, 10, 40, 100);
 
     }
     
