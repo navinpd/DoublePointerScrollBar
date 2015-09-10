@@ -31,11 +31,11 @@ public class WindowedSeekBar extends ImageView {
     private float thumblX, thumbrX;
     private Paint paint = new Paint();
     private int selectedThumb;
+    private int totalAmount, lastAmount, middleAmount, firstAmount;
+    private int barWidth;
     private float offset;
     private float minWindow;
-    private float totalAmount, lastAmount, middleAmount, firstAmount;
-    private float barWidth;
-    private float minGap = 0;
+    private int minAmount;
     private int barMarginTop = 5;
 
     private TextView firstText, lastText, middleText;
@@ -91,10 +91,10 @@ public class WindowedSeekBar extends ImageView {
         if (barWidth == 0)
             return;
 
-        minWindow = barWidth * minGap / totalAmount;
+        minWindow = barWidth * minAmount / totalAmount;
 
-        thumblX = firstAmount / totalAmount * barWidth + thumbl.getWidth();
-        thumbrX = ((firstAmount + middleAmount) / totalAmount) * barWidth + thumbl.getWidth();
+        thumblX = (((float) firstAmount / totalAmount) * barWidth) + thumbl.getWidth();
+        thumbrX = (((float) firstAmount + middleAmount) / totalAmount) * barWidth + thumbl.getWidth();
         showPosition();
 
         invalidate();
@@ -153,67 +153,50 @@ public class WindowedSeekBar extends ImageView {
     }
 
     private void showPosition() {
-        middleAmount = Float.valueOf(String.format("%.2f", (thumbrX - thumblX) * totalAmount / barWidth));
-
-
-        /*if (selectedThumb == 1) {
-
-            lastText.setText(String.valueOf(middleAmount));
-
-            firstAmount = totalAmount - middleAmount - lastAmount;
-
-            Log.d("TAG", "First Amount tab1 " + firstAmount + " Middle Amount " + middleAmount + " Last Amount " + lastAmount);
-
-            firstText.setText(getFormattedAmount(firstAmount, false));
-
-        } else if (selectedThumb == 2) {
-
-            lastText.setText(getFormattedAmount(middleAmount, false));
-
-            lastAmount = totalAmount - middleAmount - firstAmount;
-
-            Log.d("TAG", "First Amount tab2 " + firstAmount + " Middle Amount " + middleAmount + " Last Amount " + lastAmount);
-
-            middleText.setText(String.valueOf(lastAmount));
-
-
-        } */
         if (selectedThumb == 1) {
 
-            middleAmount = (thumbrX - thumblX) * totalAmount / barWidth;
-            middleAmount = Float.valueOf(roundTo2Decimal(middleAmount));
+            middleAmount = (int) (thumbrX - thumblX) * totalAmount / barWidth;
+            lastAmount = (int) (barWidth + thumbl.getWidth() - thumbrX) * totalAmount / barWidth;
+            firstAmount = (int) (thumblX - thumbl.getWidth()) * totalAmount / barWidth;
 
-            firstAmount = totalAmount - middleAmount - lastAmount;
-            firstAmount = Float.valueOf(roundTo2Decimal(firstAmount));
+            if (totalAmount - firstAmount - middleAmount - lastAmount > 0) {
+                firstAmount = totalAmount - middleAmount - lastAmount;
+            }
 
-            Log.d("TAG", "Tab1" + " Total Amount " + totalAmount + " First Amount " + firstAmount + " Middle Amount " + middleAmount + " Last Amount " + lastAmount);
+            if (middleAmount < minAmount) {
+                middleAmount = 0;
+                thumblX = thumbrX;
+                firstAmount = totalAmount - middleAmount - lastAmount;
+            }
 
-            middleText.setText(String.valueOf(middleAmount));
-
-            firstText.setText(String.valueOf(firstAmount));
+            middleText.setText(getFormattedAmount(middleAmount));
+            lastText.setText(getFormattedAmount(lastAmount));
+            firstText.setText(getFormattedAmount(firstAmount));
 
         } else if (selectedThumb == 2) {
 
-            middleAmount = (thumbrX - thumblX) * totalAmount / barWidth;
-            middleAmount = Float.valueOf(roundTo2Decimal(middleAmount));
+            firstAmount = (int) (thumblX - thumbl.getWidth()) * totalAmount / barWidth;
+            middleAmount = (int) (thumbrX - thumblX) * totalAmount / barWidth;
+            lastAmount = (int) (barWidth + thumbl.getWidth() - thumbrX) * totalAmount / barWidth;
 
-            lastAmount = totalAmount - middleAmount - firstAmount;
-            lastAmount = Float.valueOf(roundTo2Decimal(lastAmount));
+            if (totalAmount - firstAmount - middleAmount - lastAmount > 0) {
+                lastAmount = totalAmount - firstAmount - middleAmount;
+            }
 
-            Log.d("TAG", "Tab2" + " Total Amount " + totalAmount + " First Amount tab " + firstAmount + " Middle Amount " + middleAmount + " Last Amount " + lastAmount);
+            if(middleAmount < minAmount) {
+                middleAmount = 0;
+                lastAmount = totalAmount - middleAmount - firstAmount;
+                thumbrX = thumblX;
+            }
 
-            middleText.setText(String.valueOf(middleAmount));
-
-            lastText.setText(String.valueOf(lastAmount));
+            firstText.setText(getFormattedAmount(firstAmount));
+            middleText.setText(getFormattedAmount(middleAmount));
+            lastText.setText(getFormattedAmount(lastAmount));
 
         } else {
-
-//            firstText.setText(getFormattedAmount((thumblX - thumbl.getWidth()) * totalAmount / barWidth, false));
-//            middleText.setText(getFormattedAmount((thumbrX - thumblX) * totalAmount / barWidth, false));
-//            lastText.setText(getFormattedAmount(totalAmount - ((thumblX - thumbl.getWidth()) * totalAmount / barWidth) - (thumbrX - thumblX) * totalAmount / barWidth, false));
-            firstText.setText(roundTo2Decimal(firstAmount));
-            lastText.setText(roundTo2Decimal(lastAmount));
-            middleText.setText(roundTo2Decimal(middleAmount));
+            firstText.setText(getFormattedAmount(firstAmount));
+            middleText.setText(getFormattedAmount(middleAmount));
+            lastText.setText(getFormattedAmount(lastAmount));
         }
 
     }
@@ -232,12 +215,13 @@ public class WindowedSeekBar extends ImageView {
         return null;
     }
 
-    public void updateBar(float firstAmount, float middleAmount, float lastAmount, float totalAmount) {
+    public void updateBar(float firstAmount, float middleAmount, float lastAmount, float totalAmount, float minMidValue) {
 
-        this.firstAmount = firstAmount;
-        this.middleAmount = middleAmount;
-        this.lastAmount = lastAmount;
-        this.totalAmount = totalAmount;
+        this.firstAmount = (int) firstAmount;
+        this.middleAmount = (int) middleAmount;
+        this.lastAmount = (int) lastAmount;
+        this.totalAmount = (int) totalAmount;
+        this.minAmount = (int) minMidValue;
         updateView();
     }
 
@@ -247,12 +231,9 @@ public class WindowedSeekBar extends ImageView {
         lastText = lastEt;
     }
 
-    private String getFormattedAmount(float amount, boolean isWholeNumber) {
+    private String getFormattedAmount(int amount) {
         DecimalFormat formatter;
-        if (isWholeNumber)
-            formatter = new DecimalFormat("##,##,##,###.##");
-        else
-            formatter = new DecimalFormat("##,##,##,##0.00");
+        formatter = new DecimalFormat("##,##,##,###");
         String mAmount = formatter.format(amount);
         return mAmount;
     }
